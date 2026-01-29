@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>Subir imagen a S3</h1>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Subir</button>
+    </form>
+    {% if messages %}
+      <ul>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    <p><a href="/files/">Ver lista</a></p>
+  </body>
+</html>

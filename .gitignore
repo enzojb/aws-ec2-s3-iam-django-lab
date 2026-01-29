@@ -1,0 +1,3 @@
+awsLab/venv/
+awsLab/.env
+awsLab/db.sqlite3

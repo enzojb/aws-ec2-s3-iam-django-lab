@@ -1,0 +1,16 @@
+[Unit]
+Description=gunicorn for awsLab
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/var/www/awsLab/awsLab
+Environment="PATH=/var/www/awsLab/venv/bin"
+ExecStart=/var/www/awsLab/venv/bin/gunicorn \
+  --workers 3 \
+  --bind 127.0.0.1:8000 \
+  awsLab.wsgi:application
+
+[Install]
+WantedBy=multi-user.target

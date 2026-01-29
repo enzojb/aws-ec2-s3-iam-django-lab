@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>Archivos subidos</h1>
+    <p><a href="/upload/">Subir otra</a></p>
+
+    <ul>
+      {% for item in items %}
+        <li>
+          <strong>{{ item.title }}</strong>
+          ({{ item.original_name }}) —
+          <a href="/files/{{ item.id }}/view/">Ver (URL prefirmada)</a>
+          <br>
+          <small>S3 key: {{ item.s3_key }}</small>
+        </li>
+      {% empty %}
+        <li>No hay archivos</li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>
