@@ -48,11 +48,11 @@ La aplicación Django contiene la lógica de negocio del laboratorio.
 
 Funciones principales:
 - Recepción de archivos desde el frontend
-- Validación básica
+- Validación de tamaño y formato (server-side, no confía en lo que declara el cliente)
 - Delegación del almacenamiento a un servicio S3
 - Generación de URLs prefirmadas para acceso temporal
 
-La aplicación no contiene credenciales AWS ni lógica de autenticación explícita.
+La aplicación no contiene credenciales AWS embebidas. Sí exige su propia autenticación de sesión — ver "Autorización a nivel de aplicación" más abajo.
 
 ---
 
@@ -92,6 +92,14 @@ No se utilizan access keys ni secretos embebidos en el código.
 
 ---
 
+## Autorización a nivel de aplicación
+
+El punto anterior describe la autenticación de **infraestructura** (la EC2 frente a AWS). Es un nivel distinto de la autenticación de **aplicación** (quién puede usar la app), y este laboratorio también la implementa:
+
+- Las vistas de `uploads` (subir, listar, ver) requieren un usuario logueado (`@login_required`, sistema de auth estándar de Django — el mismo que ya protegía `/admin/`).
+- Los archivos se referencian externamente por un identificador público (`public_id`, un UUID) en vez del id autoincremental de la base, para que no se puedan enumerar recorriendo `/files/1/`, `/files/2/`...
+- El Content-Type y la extensión que llegan a S3 se derivan del contenido real del archivo (Pillow), no del nombre ni del header que manda el cliente.
+
 ## Principios de diseño aplicados
 
 - Separación de responsabilidades
@@ -102,11 +110,20 @@ No se utilizan access keys ni secretos embebidos en el código.
 
 ---
 
+## Decisiones de alcance del laboratorio
+
+Algunas elecciones son deliberadas para el tamaño y el objetivo de este proyecto, no descuidos:
+
+- **SQLite en vez de RDS**: la app corre en una sola instancia/proceso, sin escritura concurrente real que lo justifique. Migrar es directo (cambiar `DATABASES` por una base gestionada vía `dj-database-url`) pero no aporta nada a lo que este lab está demostrando.
+- **Auth de sesión simple, sin modelo de ownership por usuario**: es un laboratorio de un solo operador (se crea un superusuario con `createsuperuser`). Un modelo multiusuario con `FK` a `User` por archivo sería sobre-ingeniería para lo que este proyecto necesita mostrar.
+- **Rate limiting a nivel de Nginx, no de Django**: Gunicorn corre con varios workers (`--workers 3`); un límite en memoria a nivel de Django sería por-worker, no global, y daría una falsa sensación de protección. `limit_req` en Nginx sí es efectivo independientemente de cuántos workers haya detrás.
+
 ## Posibles extensiones
 
 La arquitectura permite escalar hacia:
 - CloudFront para distribución de contenido
-- HTTPS con certificados TLS
+- Terraform para IAM/Security Groups/VPC (hoy documentados en `docs/`, pero configurados a mano en la consola)
+- Rate limiting distribuido (Redis) si la app corre en más de una instancia
 - Separación de servicios por rol o instancia
 - Migración a ECS o Lambda
 

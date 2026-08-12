@@ -1,9 +1,36 @@
+# Rate limiting para /upload/: 5 requests/min por IP, con ráfaga corta permitida.
+limit_req_zone $binary_remote_addr zone=uploads:10m rate=5r/m;
+
 server {
     listen 80;
     server_name YOUR_PUBLIC_IP_OR_DOMAIN;
 
+    # Todo el tráfico HTTP se redirige a HTTPS. El certificado lo gestiona
+    # certbot (ver deploy/deploy.md) — requiere un dominio real apuntando
+    # a la instancia, Let's Encrypt no emite certificados para una IP sola.
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name YOUR_PUBLIC_IP_OR_DOMAIN;
+
+    ssl_certificate     /etc/letsencrypt/live/YOUR_PUBLIC_IP_OR_DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/YOUR_PUBLIC_IP_OR_DOMAIN/privkey.pem;
+
     location /static/ {
         alias /var/www/awsLab/awsLab/staticfiles/;
+    }
+
+    location /upload/ {
+        limit_req zone=uploads burst=3 nodelay;
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location / {

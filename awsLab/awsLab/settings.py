@@ -25,11 +25,13 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS",
-    default="127.0.0.1,localhost",
-    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
-)
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in config("ALLOWED_HOSTS", default="127.0.0.1,localhost").split(",")
+    if h.strip()
+]
+
+ADMIN_URL = config("ADMIN_URL", default="admin/")
 
 # Application definition
 
@@ -84,6 +86,10 @@ DATABASES = {
     }
 }
 
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "uploads:list"
+LOGOUT_REDIRECT_URL = "login"
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -132,6 +138,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 AWS_REGION = config("AWS_REGION", default="us-east-1")
 AWS_S3_BUCKET = config("AWS_S3_BUCKET", default="")
 S3_PREFIX = config("S3_PREFIX", default="images/")
+
+MAX_UPLOAD_SIZE_MB = config("MAX_UPLOAD_SIZE_MB", default=5, cast=int)
+
+if ENV == "production":
+    SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=31536000, cast=int)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

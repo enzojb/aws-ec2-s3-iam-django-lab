@@ -22,14 +22,17 @@ def _s3_client():
     return boto3.client("s3", region_name=settings.AWS_REGION)
 
 
-def build_key(original_name: str) -> str:
-    ext = ""
-    if "." in original_name:
-        ext = "." + original_name.rsplit(".", 1)[-1].lower()
+def build_key(extension: str) -> str:
+    """Arma una key aleatoria bajo el prefijo configurado.
+
+    `extension` debe venir ya validada (uploads/forms.py la deriva del
+    contenido real del archivo, no del nombre que mandó el cliente).
+    """
+    ext = extension.lower().lstrip(".")
     prefix = settings.S3_PREFIX or "images/"
     if not prefix.endswith("/"):
         prefix += "/"
-    return f"{prefix}{uuid.uuid4().hex}{ext}"
+    return f"{prefix}{uuid.uuid4().hex}.{ext}"
 
 
 def upload_fileobj(file_obj, key: str, content_type: str | None = None) -> str:

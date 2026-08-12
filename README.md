@@ -39,10 +39,11 @@ Usuario / Navegador → Nginx (HTTP :80) → Gunicorn (WSGI :8000) → Django �
 
 ## 🚀 Funcionalidades del laboratorio
 
-- Subida de archivos desde la aplicación web
+- Autenticación de sesión para acceder a la app (subir, listar, descargar)
+- Subida de archivos desde la aplicación web, con validación de tamaño y formato
 - Almacenamiento de archivos en un bucket S3 privado
 - Listado de archivos almacenados
-- Acceso a archivos mediante **URLs prefirmadas**
+- Acceso a archivos mediante **URLs prefirmadas**, identificadas con un UUID no adivinable
 - Sin uso de credenciales estáticas en el código
 
 ---
@@ -61,6 +62,15 @@ El diseño prioriza seguridad desde la arquitectura:
 Este enfoque reduce el riesgo de filtración de credenciales y se alinea con las
 prácticas recomendadas para entornos productivos en AWS.
 
+A nivel de aplicación (no solo de infraestructura):
+
+- ✅ Autenticación de sesión requerida para subir, listar y descargar (`login_required`)
+- ✅ Identificadores públicos no adivinables (UUID) en vez de IDs autoincrementales
+- ✅ Validación de tamaño y formato de archivo server-side, sin confiar en el Content-Type del cliente
+- ✅ HTTPS/TLS vía Nginx + certbot, con `SECURE_SSL_REDIRECT`/HSTS activados en producción
+- ✅ Rate limiting en Nginx sobre el endpoint de subida
+- ✅ Ruta de `/admin/` configurable por variable de entorno en vez de fija
+
 ---
 
 ## 🧪 Variables de entorno
@@ -70,13 +80,20 @@ Las variables sensibles no se incluyen en el repositorio.
 Ejemplo (`.env.example`):
 
 ```bash
+ENV=local
 DEBUG=False
 SECRET_KEY=secret-key
+
+ALLOWED_HOSTS=127.0.0.1,localhost
+ADMIN_URL=admin/
+MAX_UPLOAD_SIZE_MB=5
 
 AWS_REGION=us-east-1
 AWS_S3_BUCKET=bucket-name
 S3_PREFIX=images/
 ```
+
+En producción, `ALLOWED_HOSTS` pasa a ser el dominio real y `ADMIN_URL` conviene cambiarlo a algo no adivinable (ver `deploy/deploy.md`).
 
 ## ☁️ AWS Setup (resumen)
 
@@ -154,8 +171,11 @@ pip install -r ./requirements.txt
 cp ./.env.example .env
 
 python manage.py migrate
+python manage.py createsuperuser
 python manage.py runserver
 ```
+
+La app ahora exige login (ver sección Seguridad) — `createsuperuser` crea el usuario con el que vas a entrar.
 
 ### Finalmente acceder a:
 

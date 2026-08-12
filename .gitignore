@@ -1,3 +1,5 @@
 awsLab/venv/
 awsLab/.env
 awsLab/db.sqlite3
+__pycache__/
+*.pyc

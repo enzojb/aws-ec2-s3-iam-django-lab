@@ -91,6 +91,30 @@ Los archivos estáticos se recolectan mediante:
 
 Nginx los sirve directamente desde el directorio staticfiles/, evitando que Gunicorn o Django los procesen.
 
+## HTTPS/TLS con Let's Encrypt (certbot)
+
+`nginx.awsLab.example` ya trae dos server blocks: el primero (puerto 80) redirige todo a HTTPS, el segundo (443) termina TLS. Para emitir el certificado:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+```
+
+certbot instala el certificado, reescribe `ssl_certificate`/`ssl_certificate_key` en el server block y configura la renovación automática vía el timer de systemd (`certbot.timer`), sin pasos manuales adicionales.
+
+**Nota:** Let's Encrypt exige un nombre de dominio — no emite certificados para una IP pública sola. Para probar esto hace falta un dominio (o subdominio) apuntando al Elastic IP de la instancia.
+
+Una vez emitido el certificado, en `.env` seteá `ENV=production` para que Django active `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` y HSTS (ver `awsLab/settings.py`).
+
+## Variables de entorno en producción
+
+Además de las que ya trae `.env.example`, en el servidor real conviene setear:
+
+```bash
+ALLOWED_HOSTS=your-domain.com
+ADMIN_URL=panel-interno/
+```
+
 ## Consideraciones de seguridad
 
 - El servidor de desarrollo de Django (runserver) no se utiliza en producción
@@ -98,6 +122,10 @@ Nginx los sirve directamente desde el directorio staticfiles/, evitando que Guni
 - Gunicorn no es accesible desde Internet
 
 - Nginx es el único punto de entrada público
+
+- Todo el tráfico se sirve por HTTPS (redirect 80→443, certificado de Let's Encrypt)
+
+- Nginx aplica rate limiting (`limit_req`) sobre `/upload/`
 
 - El despliegue sigue una separación clara de responsabilidades
 
